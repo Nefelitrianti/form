@@ -46,6 +46,22 @@ def dual_execute(query, params=()):
                 cursor.close()
                 conn.close()
 
+def dual_fetch(query):
+    rows = []
+    for conn_func in [get_local_connection, get_railway_connection]:
+        conn = conn_func()
+        if conn:
+            try:
+                cursor = conn.cursor()
+                cursor.execute(query)
+                rows.extend(cursor.fetchall())
+            except:
+                pass
+            finally:
+                cursor.close()
+                conn.close()
+    return rows
+
 st.set_page_config(page_title="Company & Project Management", layout="wide")
 st.title("Company & Project Management")
 
@@ -162,8 +178,6 @@ elif menu == "Add Project":
 elif menu == "Review Projects":
     st.subheader("Review All Companies and Projects")
     try:
-        conn = get_railway_connection()
-        cursor = conn.cursor()
         base_query = """
             SELECT c.company_name, c.full_name, c.sector, c.company_responsible, c.project_responsible,
                    p.start_date, p.data_received, p.data_review, p.report_date,
@@ -172,8 +186,7 @@ elif menu == "Review Projects":
             LEFT JOIN projects1 p ON c.company_id = p.company_id
             ORDER BY c.company_name, p.start_date DESC
         """
-        cursor.execute(base_query)
-        rows = cursor.fetchall()
+        rows = dual_fetch(base_query)
         if rows:
             df = pd.DataFrame(rows, columns=[
                 "Company Name", "Full Name", "Sector", "Company Responsible", "Company Project Responsible",
@@ -195,9 +208,5 @@ elif menu == "Review Projects":
             st.info("No data found.")
     except mysql.connector.Error as e:
         st.error(f"Database error: {e}")
-    finally:
-        if 'conn' in locals() and conn.is_connected():
-            cursor.close()
-            conn.close()
 
 
