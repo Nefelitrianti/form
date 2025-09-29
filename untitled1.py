@@ -6,17 +6,45 @@ from datetime import date
 import os
 from dotenv import load_dotenv
 
-load_dotenv("env.txt")
+if os.path.exists("env.txt"):
+    load_dotenv("env.txt")
 
-def get_connection():
+def get_local_connection():
+    try:
+        return mysql.connector.connect(
+            host=os.getenv("LOCAL_HOST"),
+            port=int(os.getenv("LOCAL_PORT")),
+            user=os.getenv("LOCAL_USER"),
+            password=os.getenv("LOCAL_PASS"),
+            database=os.getenv("LOCAL_DB"),
+            unix_socket=None
+        )
+    except:
+        return None
+
+def get_railway_connection():
     return mysql.connector.connect(
-        host=os.getenv("DB_HOST"),
-        port=int(os.getenv("DB_PORT")),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASS"),
-        database=os.getenv("DB_NAME"),
+        host=os.getenv("DB_HOST", st.secrets.get("DB_HOST")),
+        port=int(os.getenv("DB_PORT", st.secrets.get("DB_PORT", "3306"))),
+        user=os.getenv("DB_USER", st.secrets.get("DB_USER")),
+        password=os.getenv("DB_PASS", st.secrets.get("DB_PASS")),
+        database=os.getenv("DB_NAME", st.secrets.get("DB_NAME")),
         unix_socket=None
     )
+
+def dual_execute(query, params=()):
+    for conn_func in [get_local_connection, get_railway_connection]:
+        conn = conn_func()
+        if conn:
+            try:
+                cursor = conn.cursor()
+                cursor.execute(query, params)
+                conn.commit()
+            except:
+                pass
+            finally:
+                cursor.close()
+                conn.close()
 
 st.set_page_config(page_title="Company & Project Management", layout="wide")
 st.title("Company & Project Management")
@@ -30,37 +58,19 @@ if menu == "Register Company":
     sector = st.text_input("Sector")
     company_responsible = st.text_input("Company Responsible")
     company_project_responsible = st.selectbox("Company Project Responsible", ["None", "Nefeli", "Aggelos"])
-
     if st.button("Save Company"):
-        try:
-            conn = get_connection()
-            cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM companies WHERE company_name = %s", (company_name,))
-            (name_count,) = cursor.fetchone()
-            cursor.execute("SELECT COUNT(*) FROM companies WHERE full_name = %s", (full_name,))
-            (full_count,) = cursor.fetchone()
-            if name_count > 0:
-                st.error(f"A company with name '{company_name}' already exists!")
-            elif full_count > 0:
-                st.error(f"A company with full name '{full_name}' already exists!")
-            else:
-                cursor.execute("""
-                    INSERT INTO companies (company_name, full_name, sector, company_responsible, project_responsible)
-                    VALUES (%s, %s, %s, %s, %s)
-                """, (company_name, full_name, sector, company_responsible, company_project_responsible))
-                conn.commit()
-                st.success(f"Company '{company_name}' registered successfully!")
-        except mysql.connector.Error as e:
-            st.error(f"Database error: {e.msg}")
-        finally:
-            if 'conn' in locals() and conn.is_connected():
-                cursor.close()
-                conn.close()
+        query = """
+            INSERT INTO companies (company_name, full_name, sector, company_responsible, project_responsible)
+            VALUES (%s, %s, %s, %s, %s)
+        """
+        params = (company_name, full_name, sector, company_responsible, company_project_responsible)
+        dual_execute(query, params)
+        st.success(f"Company '{company_name}' saved")
 
 elif menu == "Update Company":
     st.subheader("Update Existing Company")
     try:
-        conn = get_connection()
+        conn = get_railway_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT company_id, company_name FROM companies ORDER BY company_name")
         companies = cursor.fetchall()
@@ -76,13 +86,14 @@ elif menu == "Update Company":
                 new_company_project_responsible = st.text_input("Company Project Responsible", value=row[3] or "")
                 submitted = st.form_submit_button("Update")
                 if submitted:
-                    cursor.execute("""
+                    query = """
                         UPDATE companies
                         SET full_name=%s, sector=%s, company_responsible=%s, project_responsible=%s
                         WHERE company_id=%s
-                    """, (new_full_name, new_sector, new_company_responsible, new_company_project_responsible, company_id))
-                    conn.commit()
-                    st.success(f"Company '{company_choice}' updated successfully!")
+                    """
+                    params = (new_full_name, new_sector, new_company_responsible, new_company_project_responsible, company_id)
+                    dual_execute(query, params)
+                    st.success(f"Company '{company_choice}' updated")
         else:
             st.info("No companies registered yet.")
     except mysql.connector.Error as e:
@@ -95,7 +106,7 @@ elif menu == "Update Company":
 elif menu == "Add Project":
     st.subheader("Add Project for a Company")
     try:
-        conn = get_connection()
+        conn = get_railway_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT company_id, company_name FROM companies ORDER BY company_name")
         companies = cursor.fetchall()
@@ -119,21 +130,25 @@ elif menu == "Add Project":
                     cursor.execute("SELECT COUNT(*) FROM projects1 WHERE company_id = %s", (company_id,))
                     (count,) = cursor.fetchone()
                     if count > 0:
-                        cursor.execute("""
+                        query = """
                             UPDATE projects1 
                             SET start_date=%s, data_received=%s, data_review=%s, report_date=%s,
                                 invoice_amount=%s, is_paid=%s, project_responsible=%s
                             WHERE company_id=%s
-                        """, (start_date, data_received, data_review, report_date,
-                              invoice_amount, is_paid, project_responsible, company_id))
-                        st.success(f"Project for company '{company_choice}' updated successfully!")
+                        """
+                        params = (start_date, data_received, data_review, report_date,
+                                  invoice_amount, is_paid, project_responsible, company_id)
+                        dual_execute(query, params)
+                        st.success(f"Project for company '{company_choice}' updated")
                     else:
-                        cursor.execute("""
+                        query = """
                             INSERT INTO projects1 (company_id, start_date, data_received, data_review, report_date, invoice_amount, is_paid, project_responsible)
                             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                        """, (company_id, start_date, data_received, data_review, report_date,
-                              invoice_amount, is_paid, project_responsible))
-                        st.success(f"Project added for company '{company_choice}'!")
+                        """
+                        params = (company_id, start_date, data_received, data_review, report_date,
+                                  invoice_amount, is_paid, project_responsible)
+                        dual_execute(query, params)
+                        st.success(f"Project added for company '{company_choice}'")
                     conn.commit()
         else:
             st.info("No companies registered yet.")
@@ -147,7 +162,7 @@ elif menu == "Add Project":
 elif menu == "Review Projects":
     st.subheader("Review All Companies and Projects")
     try:
-        conn = get_connection()
+        conn = get_railway_connection()
         cursor = conn.cursor()
         base_query = """
             SELECT c.company_name, c.full_name, c.sector, c.company_responsible, c.project_responsible,
