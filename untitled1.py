@@ -14,12 +14,12 @@ def get_connection():
     )
 
 st.set_page_config(page_title="Company & Project Management", layout="wide")
-st.title("🏢 Company & Project Management")
+st.title(" Company & Project Management")
 
 menu = st.sidebar.radio("Navigation", ["Register Company", "Update Company", "Add Project", "Review Projects"])
 
 if menu == "Register Company":
-    st.subheader("➕ Register New Company")
+    st.subheader(" Register New Company")
     company_name = st.text_input("Company Name")
     full_name = st.text_input("Full Name")
     sector = st.text_input("Sector")
@@ -51,14 +51,14 @@ if menu == "Register Company":
 
         except mysql.connector.Error as e:
             # Show exact MySQL error message
-            st.error(f"❌ Database error: {e.msg}")
+            st.error(f" Database error: {e.msg}")
         finally:
             if 'conn' in locals() and conn.is_connected():
                 cursor.close()
                 conn.close()
 
 elif menu == "Update Company":
-    st.subheader("✏️ Update Existing Company")
+    st.subheader(" Update Existing Company")
     try:
         conn = get_connection()
         cursor = conn.cursor()
@@ -88,7 +88,7 @@ elif menu == "Update Company":
                         WHERE company_id=%s
                     """, (new_full_name, new_sector, new_company_responsible, new_company_project_responsible, company_id))
                     conn.commit()
-                    st.success(f"✅ Company '{company_choice}' updated successfully!")
+                    st.success(f" Company '{company_choice}' updated successfully!")
         else:
             st.info("ℹ️ No companies registered yet.")
 
@@ -100,7 +100,7 @@ elif menu == "Update Company":
             conn.close()
 
 elif menu == "Add Project":
-    st.subheader("📑 Add Project for a Company")
+    st.subheader(" Add Project for a Company")
     try:
         conn = get_connection()
         cursor = conn.cursor()
@@ -171,7 +171,7 @@ elif menu == "Add Project":
 
 
 elif menu == "Review Projects":
-    st.subheader("📊 Review All Companies and Projects")
+    st.subheader(" Review All Companies and Projects")
     try:
         conn = get_connection()
         cursor = conn.cursor()
@@ -204,13 +204,13 @@ elif menu == "Review Projects":
                 df_excel.to_excel(writer, index=False, sheet_name="Review")
 
             st.download_button(
-                label="📥 Download Excel (without invoice & paid)",
+                label=" Download Excel ",
                 data=output.getvalue(),
                 file_name="companies_projects.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
         else:
-            st.info("ℹ️ No data found.")
+            st.info(" No data found.")
 
     except mysql.connector.Error as e:
         st.error(f"❌ Database error: {e}")
