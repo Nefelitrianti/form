@@ -182,6 +182,7 @@ elif menu == "Add Project":
 
                 submitted = st.form_submit_button("Save Project")
                 if submitted:
+                    # Check if this company already has this project type
                     rows = dual_fetch(
                         "SELECT COUNT(*) FROM projects1 WHERE company_id = %s AND project_type = %s",
                         (company_id, project_type)
@@ -199,11 +200,12 @@ elif menu == "Add Project":
                         params = (company_id, project_type, start_date, data_received, data_review,
                                   report_date, invoice_amount, is_paid, project_responsible)
                         dual_execute(query, params)
-                        st.success(f"Project '{project_type}' added for company '{company_choice}'!")
+                        st.success(f"✅ A new project '{project_type}' was added for company '{company_choice}'!")
         else:
             st.info("No companies registered yet.")
     except mysql.connector.Error as e:
         st.error(f"Database error: {e}")
+
 
 
 elif menu == "Review Projects":
