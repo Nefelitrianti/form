@@ -156,54 +156,55 @@ elif menu == "Add Project":
         cursor = conn.cursor()
         cursor.execute("SELECT company_id, company_name FROM companies ORDER BY company_name")
         companies = cursor.fetchall()
+
         if companies:
             company_choice = st.selectbox("Select Company", [c[1] for c in companies])
             company_id = [c[0] for c in companies if c[1] == company_choice][0]
+
+            project_type = st.selectbox("Project Type", ["IAS19", "Risk", "ESG", "Reserving", "Other"])
+
             with st.form("project_form"):
                 set_start = st.checkbox("Set Start Date")
                 start_date = st.date_input("Start Date", value=date.today()) if set_start else None
+
                 set_received = st.checkbox("Set Data Received Date")
                 data_received = st.date_input("Data Received", value=date.today()) if set_received else None
+
                 set_review = st.checkbox("Set Data Review Date")
                 data_review = st.date_input("Data Review", value=date.today()) if set_review else None
+
                 set_report = st.checkbox("Set Report Date")
                 report_date = st.date_input("Report Date", value=date.today()) if set_report else None
+
                 invoice_amount = st.number_input("Invoice Amount", min_value=0.0, step=100.0, value=0.0)
                 is_paid = st.checkbox("Paid?")
                 project_responsible = st.text_input("Project Responsible")
+
                 submitted = st.form_submit_button("Save Project")
                 if submitted:
-                    cursor.execute("SELECT COUNT(*) FROM projects1 WHERE company_id = %s", (company_id,))
-                    (count,) = cursor.fetchone()
-                    if count > 0:
-                        query = """
-                            UPDATE projects1 
-                            SET start_date=%s, data_received=%s, data_review=%s, report_date=%s,
-                                invoice_amount=%s, is_paid=%s, project_responsible=%s
-                            WHERE company_id=%s
-                        """
-                        params = (start_date, data_received, data_review, report_date,
-                                  invoice_amount, is_paid, project_responsible, company_id)
-                        dual_execute(query, params)
-                        st.success(f"Project for company '{company_choice}' updated")
+                    rows = dual_fetch(
+                        "SELECT COUNT(*) FROM projects1 WHERE company_id = %s AND project_type = %s",
+                        (company_id, project_type)
+                    )
+                    if rows and rows[0][0] > 0:
+                        st.error(f"Project '{project_type}' already exists for company '{company_choice}'!")
                     else:
                         query = """
-                            INSERT INTO projects1 (company_id, start_date, data_received, data_review, report_date, invoice_amount, is_paid, project_responsible)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                            INSERT INTO projects1 (
+                                company_id, project_type, start_date, data_received, data_review, report_date,
+                                invoice_amount, is_paid, project_responsible
+                            )
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                         """
-                        params = (company_id, start_date, data_received, data_review, report_date,
-                                  invoice_amount, is_paid, project_responsible)
+                        params = (company_id, project_type, start_date, data_received, data_review,
+                                  report_date, invoice_amount, is_paid, project_responsible)
                         dual_execute(query, params)
-                        st.success(f"Project added for company '{company_choice}'")
-                    conn.commit()
+                        st.success(f"Project '{project_type}' added for company '{company_choice}'!")
         else:
             st.info("No companies registered yet.")
     except mysql.connector.Error as e:
         st.error(f"Database error: {e}")
-    finally:
-        if 'conn' in locals() and conn.is_connected():
-            cursor.close()
-            conn.close()
+
 
 elif menu == "Review Projects":
     st.subheader("Review All Companies and Projects")
