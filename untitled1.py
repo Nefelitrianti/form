@@ -70,6 +70,7 @@ menu = st.sidebar.radio("Navigation", ["Register Company", "Update Company", "Ad
 if menu == "Register Company":
     st.subheader("Register New Company")
 
+    company_id = st.text_input("Company ID (must be unique)")
     company_name = st.text_input("Company Name")
     full_name = st.text_input("Full Name")
     company_responsible = st.text_input("Company Responsible")
@@ -79,6 +80,7 @@ if menu == "Register Company":
     sector_health = st.checkbox("Health", key="sector_health")
     sector_pension = st.checkbox("Pension", key="sector_pension")
     sector_other = st.checkbox("Other", key="sector_other")
+
     st.markdown("### Project Type")
     project_IAS19 = st.checkbox("IAS19", key="project_IAS19")
     project_Risk = st.checkbox("Risk", key="project_Risk")
@@ -86,23 +88,30 @@ if menu == "Register Company":
     project_Reserving = st.checkbox("Reserving", key="project_Reserving")
     project_Other = st.checkbox("Other", key="project_other")
 
-
     if st.button("Save Company"):
-        query = """
-            INSERT INTO companies (
-                company_name, full_name, company_responsible,
-                sector_finance, sector_health, sector_pension, sector_other,
-                project_IAS19, project_Risk, project_ESG, project_Reserving, project_Other
-            )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """
-        params = (
-            company_name, full_name, company_responsible,
-            sector_finance, sector_health, sector_pension, sector_other,
-            project_IAS19, project_Risk, project_ESG, project_Reserving, project_Other
-        )
-        dual_execute(query, params)
-        st.success(f"Company '{company_name}' saved")
+        if not company_id or not company_name or not full_name:
+            st.error("Company ID, Company Name, and Full Name are required!")
+        else:
+            rows = dual_fetch("SELECT COUNT(*) FROM companies WHERE company_id = %s", (company_id,))
+            if rows and rows[0][0] > 0:
+                st.error(f"Company ID '{company_id}' already exists!")
+            else:
+                query = """
+                    INSERT INTO companies (
+                        company_id, company_name, full_name, company_responsible,
+                        sector_finance, sector_health, sector_pension, sector_other,
+                        project_IAS19, project_Risk, project_ESG, project_Reserving, project_Other
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """
+                params = (
+                    company_id, company_name, full_name, company_responsible,
+                    sector_finance, sector_health, sector_pension, sector_other,
+                    project_IAS19, project_Risk, project_ESG, project_Reserving, project_Other
+                )
+                dual_execute(query, params)
+                st.success(f"Company '{company_name}' registered successfully!")
+
 
 elif menu == "Update Company":
     st.subheader("Update Existing Company")
