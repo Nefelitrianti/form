@@ -75,16 +75,16 @@ if menu == "Register Company":
     company_responsible = st.text_input("Company Responsible")
 
     st.markdown("### Sector")
-   sector_finance = st.checkbox("Finance", key="sector_finance")
+    sector_finance = st.checkbox("Finance", key="sector_finance")
     sector_health = st.checkbox("Health", key="sector_health")
     sector_pension = st.checkbox("Pension", key="sector_pension")
     sector_other = st.checkbox("Other", key="sector_other")
-st.markdown("### Project Type")
-project_IAS19 = st.checkbox("IAS19", key="project_IAS19")
-project_Risk = st.checkbox("Risk", key="project_Risk")
-project_ESG = st.checkbox("ESG", key="project_ESG")
-project_Reserving = st.checkbox("Reserving", key="project_Reserving")
-project_Other = st.checkbox("Other", key="project_other")
+    st.markdown("### Project Type")
+    project_IAS19 = st.checkbox("IAS19", key="project_IAS19")
+    project_Risk = st.checkbox("Risk", key="project_Risk")
+    project_ESG = st.checkbox("ESG", key="project_ESG")
+    project_Reserving = st.checkbox("Reserving", key="project_Reserving")
+    project_Other = st.checkbox("Other", key="project_other")
 
 
     if st.button("Save Company"):
