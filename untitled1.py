@@ -46,14 +46,14 @@ def dual_execute(query, params=()):
                 cursor.close()
                 conn.close()
 
-def dual_fetch(query):
+def dual_fetch(query, params=()):
     rows = []
     for conn_func in [get_local_connection, get_railway_connection]:
         conn = conn_func()
         if conn:
             try:
                 cursor = conn.cursor()
-                cursor.execute(query)
+                cursor.execute(query, params)
                 rows.extend(cursor.fetchall())
             except:
                 pass
