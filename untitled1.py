@@ -69,17 +69,38 @@ menu = st.sidebar.radio("Navigation", ["Register Company", "Update Company", "Ad
 
 if menu == "Register Company":
     st.subheader("Register New Company")
+
     company_name = st.text_input("Company Name")
     full_name = st.text_input("Full Name")
-    sector = st.text_input("Sector")
     company_responsible = st.text_input("Company Responsible")
-    company_project_responsible = st.selectbox("Company Project Responsible", ["None", "Nefeli", "Aggelos"])
+
+    st.markdown("### Sector")
+    sector_finance = st.checkbox("Finance")
+    sector_health = st.checkbox("Health")
+    sector_pension = st.checkbox("Pension")
+    sector_other = st.checkbox("Other")
+
+    st.markdown("### Project Type")
+    project_IAS19 = st.checkbox("IAS19")
+    project_Risk = st.checkbox("Risk")
+    project_ESG = st.checkbox("ESG")
+    project_Reserving = st.checkbox("Reserving")
+    project_Other = st.checkbox("Other")
+
     if st.button("Save Company"):
         query = """
-            INSERT INTO companies (company_name, full_name, sector, company_responsible, project_responsible)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO companies (
+                company_name, full_name, company_responsible,
+                sector_finance, sector_health, sector_pension, sector_other,
+                project_IAS19, project_Risk, project_ESG, project_Reserving, project_Other
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
-        params = (company_name, full_name, sector, company_responsible, company_project_responsible)
+        params = (
+            company_name, full_name, company_responsible,
+            sector_finance, sector_health, sector_pension, sector_other,
+            project_IAS19, project_Risk, project_ESG, project_Reserving, project_Other
+        )
         dual_execute(query, params)
         st.success(f"Company '{company_name}' saved")
 
