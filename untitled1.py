@@ -63,8 +63,16 @@ if menu == "Register Company":
     project_responsible = st.text_input("Project Responsible (Internal / Team Lead)")
 
     if st.button("Save Company"):
+        
         if not company_id or not company_name or not full_name:
             st.error("Company ID, Company Name, and Full Name are required!")
+         
+
+        elif not company_id.isdigit():
+            st.error("Company ID must contain only digits (0–9).")
+
+        elif len(company_id) != 9:
+            st.error("Company ID must be exactly 9 digits long.")
         else:
             rows = fetch_query("SELECT COUNT(*) FROM companies WHERE company_id = %s", (company_id,))
             if rows and rows[0][0] > 0:
