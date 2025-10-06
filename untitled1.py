@@ -63,44 +63,34 @@ if menu == "Register Company":
     project_responsible = st.text_input("Project Responsible (Internal / Team Lead)")
 
     if st.button("Save Company"):
-        
+        # --- Validation Rules ---
         if not company_id or not company_name or not full_name:
             st.error("Company ID, Company Name, and Full Name are required!")
-         
 
         elif not company_id.isdigit():
             st.error("Company ID must contain only digits (0–9).")
 
         elif len(company_id) != 9:
             st.error("Company ID must be exactly 9 digits long.")
+
         else:
+            # --- Check if company ID already exists ---
             rows = fetch_query("SELECT COUNT(*) FROM companies WHERE company_id = %s", (company_id,))
-            if rows and rows[0][0]:
-        existing_resp = rows[0][0]
-        st.error(
-            f"⚠️ Project '{project_type}' for this company is already assigned to '{existing_resp}'. "
-            f"You cannot assign it to another person."
-        )
-    else:
-        query = """
-            INSERT INTO projects1 (
-                company_id, project_type, project_responsible,
-                start_date, end_date,
-                expected_data_date, actual_data_date,
-                dc_date, sito_date, disclosures, report_date
-            )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """
-        params = (
-            company_id, project_type, project_responsible,
-            start_date, end_date,
-            expected_data_date, actual_data_date,
-            dc_date, sito_date, disclosures, report_date
-        )
-        execute_query(query, params)
-        st.success(
-            f"✅ Project '{project_type}' for company {company_id} assigned to {project_responsible} added successfully!"
-        )
+            if rows and rows[0][0] > 0:
+                st.error(f"⚠️ Company ID '{company_id}' already exists. You cannot register it twice.")
+            else:
+                # --- Insert new company ---
+                query = """
+                    INSERT INTO companies (
+                        company_id, company_name, full_name,
+                        company_responsible, project_responsible
+                    )
+                    VALUES (%s, %s, %s, %s, %s)
+                """
+                params = (company_id, company_name, full_name, company_responsible, project_responsible)
+                execute_query(query, params)
+                st.success(f"✅ Company '{company_name}' registered successfully!")
+
 
 elif menu == "Add Project":
     st.subheader("Add Project for a Company")
