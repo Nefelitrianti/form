@@ -75,19 +75,32 @@ if menu == "Register Company":
             st.error("Company ID must be exactly 9 digits long.")
         else:
             rows = fetch_query("SELECT COUNT(*) FROM companies WHERE company_id = %s", (company_id,))
-            if rows and rows[0][0] > 0:
-                st.error(f"Company ID '{company_id}' already exists!")
-            else:
-                query = """
-                    INSERT INTO companies (
-                        company_id, company_name, full_name,
-                        company_responsible, project_responsible
-                    )
-                    VALUES (%s, %s, %s, %s, %s)
-                """
-                execute_query(query, (company_id, company_name, full_name,
-                                      company_responsible, project_responsible))
-                st.success(f"Company '{company_name}' registered successfully!")
+            if rows and rows[0][0]:
+        existing_resp = rows[0][0]
+        st.error(
+            f"⚠️ Project '{project_type}' for this company is already assigned to '{existing_resp}'. "
+            f"You cannot assign it to another person."
+        )
+    else:
+        query = """
+            INSERT INTO projects1 (
+                company_id, project_type, project_responsible,
+                start_date, end_date,
+                expected_data_date, actual_data_date,
+                dc_date, sito_date, disclosures, report_date
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """
+        params = (
+            company_id, project_type, project_responsible,
+            start_date, end_date,
+            expected_data_date, actual_data_date,
+            dc_date, sito_date, disclosures, report_date
+        )
+        execute_query(query, params)
+        st.success(
+            f"✅ Project '{project_type}' for company {company_id} assigned to {project_responsible} added successfully!"
+        )
 
 elif menu == "Add Project":
     st.subheader("Add Project for a Company")
