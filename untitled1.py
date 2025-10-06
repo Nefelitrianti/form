@@ -6,9 +6,15 @@ from datetime import date
 import os
 from dotenv import load_dotenv
 
+# ----------------------------
+# Load environment variables
+# ----------------------------
 if os.path.exists("env.txt"):
     load_dotenv("env.txt")
 
+# ----------------------------
+# Database connection helpers
+# ----------------------------
 def get_connection():
     return mysql.connector.connect(
         host=os.getenv("DB_HOST", st.secrets.get("DB_HOST")),
@@ -16,7 +22,6 @@ def get_connection():
         user=os.getenv("DB_USER", st.secrets.get("DB_USER")),
         password=os.getenv("DB_PASS", st.secrets.get("DB_PASS")),
         database=os.getenv("DB_NAME", st.secrets.get("DB_NAME")),
-        unix_socket=None
     )
 
 def execute_query(query, params=()):
@@ -25,6 +30,8 @@ def execute_query(query, params=()):
         cursor = conn.cursor()
         cursor.execute(query, params)
         conn.commit()
+    except mysql.connector.Error as err:
+        st.error(f"MySQL Error: {err}")
     finally:
         cursor.close()
         conn.close()
@@ -36,17 +43,22 @@ def fetch_query(query, params=()):
         cursor = conn.cursor()
         cursor.execute(query, params)
         rows = cursor.fetchall()
+    except mysql.connector.Error as err:
+        st.error(f"MySQL Error: {err}")
     finally:
         cursor.close()
         conn.close()
     return rows
 
+# ----------------------------
+# Streamlit UI
+# ----------------------------
 st.set_page_config(page_title="Company & Project Management", layout="wide")
 st.title("Company & Project Management")
 
 menu = st.sidebar.radio(
     "Navigation",
-    ["Register Company", "Add Project", "Update Project", "Review Projects"]
+    ["Register Company", "Add Project", "Review Projects"]
 )
 
 # ----------------------------
@@ -55,7 +67,7 @@ menu = st.sidebar.radio(
 if menu == "Register Company":
     st.subheader("Register New Company")
 
-    company_id = st.text_input("Company ID")
+    company_id = st.text_input("Company ID (9 digits, numbers only)")
     company_name = st.text_input("Company Name")
     full_name = st.text_input("Full Name")
 
@@ -63,23 +75,17 @@ if menu == "Register Company":
     project_responsible = st.text_input("Project Responsible (Internal / Team Lead)")
 
     if st.button("Save Company"):
-        # --- Validation Rules ---
         if not company_id or not company_name or not full_name:
             st.error("Company ID, Company Name, and Full Name are required!")
-
         elif not company_id.isdigit():
             st.error("Company ID must contain only digits (0–9).")
-
         elif len(company_id) != 9:
             st.error("Company ID must be exactly 9 digits long.")
-
         else:
-            # --- Check if company ID already exists ---
             rows = fetch_query("SELECT COUNT(*) FROM companies WHERE company_id = %s", (company_id,))
             if rows and rows[0][0] > 0:
                 st.error(f"⚠️ Company ID '{company_id}' already exists. You cannot register it twice.")
             else:
-                # --- Insert new company ---
                 query = """
                     INSERT INTO companies (
                         company_id, company_name, full_name,
@@ -91,7 +97,9 @@ if menu == "Register Company":
                 execute_query(query, params)
                 st.success(f"✅ Company '{company_name}' registered successfully!")
 
-
+# ----------------------------
+# Add Project
+# ----------------------------
 elif menu == "Add Project":
     st.subheader("Add Project for a Company")
 
@@ -102,13 +110,13 @@ elif menu == "Add Project":
 
         project_type = st.selectbox("Project Type", ["IAS19", "Risk", "ESG", "Reserving", "Other"])
 
-        # ---- Project Responsible(s) ----
-        st.markdown("#### Select Project Responsible(s)")
+        # ---- Project Responsible (single person only)
+        st.markdown("#### Select Project Responsible")
         responsible_options = ["Nefeli", "Aggelos", "Katerina", "Vasilis"]
-        project_responsible_list = st.multiselect("Choose one or more persons", responsible_options)
-        project_responsible = ", ".join(project_responsible_list) if project_responsible_list else None
+        project_responsible = st.selectbox("Choose one responsible person", responsible_options)
 
-        start_date = st.date_input("Date Form Sent (Project Start)", value=date.today())
+        # ---- Dates
+        date_sent = st.date_input("Date Form Sent (Project Start)", value=date.today())
         end_date = st.date_input("Project Deadline (Final Report Due Date)", value=date.today())
         expected_data_date = st.date_input("Expected Client Data Delivery Date", value=date.today())
         actual_data_date = st.date_input("Actual Client Data Received Date (if available)", value=None)
@@ -124,13 +132,13 @@ elif menu == "Add Project":
             disclosures = None
 
         if st.button("Save Project"):
-            # ---- Prevent duplicates for same company & project type ----
+            # ---- Prevent duplicate project type for same company
             rows = fetch_query(
                 "SELECT COUNT(*) FROM projects1 WHERE company_id = %s AND project_type = %s",
                 (company_id, project_type)
             )
             if rows and rows[0][0] > 0:
-                st.error(f"A project of type '{project_type}' already exists for this company!")
+                st.error(f"⚠️ Project '{project_type}' for this company already exists and cannot be assigned again.")
             else:
                 query = """
                     INSERT INTO projects1 (
@@ -143,15 +151,20 @@ elif menu == "Add Project":
                 """
                 params = (
                     company_id, project_type,
-                    start_date, end_date,
+                    date_sent, end_date,
                     expected_data_date, actual_data_date,
                     dc_date, sito_date, disclosures, report_date
                 )
                 execute_query(query, params)
-                st.success(f"✅ Added project '{project_type}' for company ID {company_id}")
+                st.success(
+                    f"✅ Added project '{project_type}' for company ID {company_id} (Responsible: {project_responsible})"
+                )
     else:
         st.info("No companies registered yet.")
 
+# ----------------------------
+# Review Projects
+# ----------------------------
 elif menu == "Review Projects":
     st.subheader("Review All Companies and Projects")
 
@@ -159,9 +172,10 @@ elif menu == "Review Projects":
         SELECT 
             c.company_id, c.company_name, c.full_name,
             c.company_responsible, c.project_responsible,
-            p.project_type, p.start_date, p.end_date,
-            p.expected_data_date, p.actual_data_date,
-            p.dc_date, p.sito_date, p.disclosures, p.report_date
+            p.project_type,
+            p.date_sent, p.end_date,
+            p.expected_datareceive_date, p.actual_datareceive_date,
+            p.dc_date, p.SITO_date, p.disclosures, p.report_date
         FROM companies c
         LEFT JOIN projects1 p ON c.company_id = p.company_id
         ORDER BY c.company_name, p.project_type
@@ -170,10 +184,10 @@ elif menu == "Review Projects":
     if rows:
         df = pd.DataFrame(rows, columns=[
             "Company ID", "Company Name", "Full Name",
-            "Company Responsible", "Project Responsible",
-            "Project Type", "Start Date", "End Date",
-            "Expected Data Date", "Actual Data Date",
-            "DC Date", "SI/TO Date", "Disclosures", "Report Date"
+            "Company Responsible", "Project Responsible (Company)",
+            "Project Type", "Date Sent", "End Date",
+            "Expected Data Receive", "Actual Data Receive",
+            "DC Date", "SITO Date", "Disclosures", "Report Date"
         ])
         st.dataframe(df, use_container_width=True)
 
@@ -189,4 +203,5 @@ elif menu == "Review Projects":
         )
     else:
         st.info("No data found.")
+
 
