@@ -102,7 +102,7 @@ elif menu == "Add Project":
 
         project_type = st.selectbox("Project Type", ["IAS19", "Risk", "ESG", "Reserving", "Other"])
 
-        # ---- Multi-select Project Responsible ----
+        # ---- Project Responsible(s) ----
         st.markdown("#### Select Project Responsible(s)")
         responsible_options = ["Nefeli", "Aggelos", "Katerina", "Vasilis"]
         project_responsible_list = st.multiselect("Choose one or more persons", responsible_options)
@@ -116,7 +116,7 @@ elif menu == "Add Project":
         if actual_data_date:
             st.markdown("### Data Review and Reporting Phase")
             dc_date = st.date_input("DC Date (Data Check)", value=date.today())
-            sito_date = st.date_input("SI/TO Date", value=date.today())
+            sito_date = st.date_input("SITO Date (Sign-off / Turnover)", value=date.today())
             disclosures = st.text_area("Disclosures / Comments")
             report_date = st.date_input("Report Date", value=date.today())
         else:
@@ -133,24 +133,22 @@ elif menu == "Add Project":
                 st.error(f"A project of type '{project_type}' already exists for this company!")
             else:
                 query = """
-    INSERT INTO projects1 (
-        company_id, project_type,
-        date_sent, end_date,
-        expected_datareceive_date, actual_datareceive_date,
-        dc_date, SITO_date, disclosures, report_date
-    )
-    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-"""
-params = (
-    company_id, project_type,
-    start_date, end_date,
-    expected_data_date, actual_data_date,
-    dc_date, sito_date, disclosures, report_date
-)
-execute_query(query, params)
+                    INSERT INTO projects1 (
+                        company_id, project_type,
+                        date_sent, end_date,
+                        expected_datareceive_date, actual_datareceive_date,
+                        dc_date, SITO_date, disclosures, report_date
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """
+                params = (
+                    company_id, project_type,
+                    start_date, end_date,
+                    expected_data_date, actual_data_date,
+                    dc_date, sito_date, disclosures, report_date
                 )
                 execute_query(query, params)
-                st.success(f"Added project '{project_type}' for company ID {company_id}")
+                st.success(f"✅ Added project '{project_type}' for company ID {company_id}")
     else:
         st.info("No companies registered yet.")
 
