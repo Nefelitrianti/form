@@ -59,7 +59,7 @@ menu = st.sidebar.radio(
 if menu == "Register Company":
     st.subheader("Register New Company")
 
-    company_id = st.text_input("Company ID (must be unique)")
+    company_id = st.text_input("Company ID ")
     company_name = st.text_input("Company Name")
     full_name = st.text_input("Full Name")
 
