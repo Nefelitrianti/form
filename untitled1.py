@@ -133,19 +133,21 @@ elif menu == "Add Project":
                 st.error(f"A project of type '{project_type}' already exists for this company!")
             else:
                 query = """
-                    INSERT INTO projects1 (
-                        company_id, project_type, project_responsible,
-                        start_date, end_date,
-                        expected_data_date, actual_data_date,
-                        dc_date, sito_date, disclosures, report_date
-                    )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """
-                params = (
-                    company_id, project_type, project_responsible,
-                    start_date, end_date,
-                    expected_data_date, actual_data_date,
-                    dc_date, sito_date, disclosures, report_date
+    INSERT INTO projects1 (
+        company_id, project_type,
+        date_sent, end_date,
+        expected_datareceive_date, actual_datareceive_date,
+        dc_date, SITO_date, disclosures, report_date
+    )
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+"""
+params = (
+    company_id, project_type,
+    start_date, end_date,
+    expected_data_date, actual_data_date,
+    dc_date, sito_date, disclosures, report_date
+)
+execute_query(query, params)
                 )
                 execute_query(query, params)
                 st.success(f"Added project '{project_type}' for company ID {company_id}")
