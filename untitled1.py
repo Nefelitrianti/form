@@ -89,9 +89,6 @@ if menu == "Register Company":
                                       company_responsible, project_responsible))
                 st.success(f"Company '{company_name}' registered successfully!")
 
-# ----------------------------
-# Add Project
-# ----------------------------
 elif menu == "Add Project":
     st.subheader("Add Project for a Company")
 
@@ -101,6 +98,13 @@ elif menu == "Add Project":
         company_id = [c[0] for c in companies if f"{c[1]} (ID: {c[0]})" == company_choice][0]
 
         project_type = st.selectbox("Project Type", ["IAS19", "Risk", "ESG", "Reserving", "Other"])
+
+        # ---- Multi-select Project Responsible ----
+        st.markdown("#### Select Project Responsible(s)")
+        responsible_options = ["Nefeli", "Aggelos", "Katerina", "Vasilis"]
+        project_responsible_list = st.multiselect("Choose one or more persons", responsible_options)
+        project_responsible = ", ".join(project_responsible_list) if project_responsible_list else None
+
         start_date = st.date_input("Date Form Sent (Project Start)", value=date.today())
         end_date = st.date_input("Project Deadline (Final Report Due Date)", value=date.today())
         expected_data_date = st.date_input("Expected Client Data Delivery Date", value=date.today())
@@ -117,24 +121,25 @@ elif menu == "Add Project":
             disclosures = None
 
         if st.button("Save Project"):
+            # ---- Prevent duplicates for same company & project type ----
             rows = fetch_query(
                 "SELECT COUNT(*) FROM projects1 WHERE company_id = %s AND project_type = %s",
                 (company_id, project_type)
             )
             if rows and rows[0][0] > 0:
-                st.error(f"Project '{project_type}' already exists for this company!")
+                st.error(f"A project of type '{project_type}' already exists for this company!")
             else:
                 query = """
                     INSERT INTO projects1 (
-                        company_id, project_type,
+                        company_id, project_type, project_responsible,
                         start_date, end_date,
                         expected_data_date, actual_data_date,
                         dc_date, sito_date, disclosures, report_date
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """
                 params = (
-                    company_id, project_type,
+                    company_id, project_type, project_responsible,
                     start_date, end_date,
                     expected_data_date, actual_data_date,
                     dc_date, sito_date, disclosures, report_date
@@ -144,9 +149,6 @@ elif menu == "Add Project":
     else:
         st.info("No companies registered yet.")
 
-# ----------------------------
-# Review Projects
-# ----------------------------
 elif menu == "Review Projects":
     st.subheader("Review All Companies and Projects")
 
